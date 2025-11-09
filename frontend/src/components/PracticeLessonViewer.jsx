@@ -4,7 +4,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Play, RotateCcw, Check, X, ChevronRight, Lightbulb } from 'lucide-react';
 
-export default function PracticeLessonViewer({ lesson, onBack, onNext }) {
+export default function PracticeLessonViewer({ lesson, onBack, onNext, hiltToken }) {
   const [activeTab, setActiveTab] = useState('html');
   const [code, setCode] = useState({
     html: lesson?.starterCode?.html || '',
@@ -163,15 +163,30 @@ export default function PracticeLessonViewer({ lesson, onBack, onNext }) {
 
     addToConsole('📤 Submitting solution...', 'info');
 
-    // TODO: Send to backend API
+    // Send to backend API
     try {
-      // const response = await fetch('/api/progress/submit', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ lessonId: lesson.id, code, testResults })
-      // });
+      const response = await fetch('/api/execute', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-hilt-token': hiltToken
+        },
+        body: JSON.stringify({
+          lessonId: lesson.id,
+          courseId: lesson.courseId,
+          code,
+          testResults,
+          points: lesson.points
+        })
+      });
 
-      addToConsole(`✅ Success! You earned ${lesson.points} points!`, 'success');
+      const data = await response.json();
+
+      if (!data.success) {
+        throw new Error(data.error || 'Submission failed');
+      }
+
+      addToConsole(data.message, 'success');
       setTimeout(() => {
         if (onNext) onNext();
       }, 2000);

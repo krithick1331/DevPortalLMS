@@ -1,11 +1,66 @@
 // FILE: frontend/src/App.jsx
 // Complete App with all 4 courses (FET, WP, WS, ITES) based on syllabi
 
-import { useState } from 'react';
-import PracticeLessonViewer from './components/PracticeLessonViewer';
+import { useState, useEffect } from 'react';
+import ProtectedLesson from './components/ProtectedLesson';
 import { navbarLesson, formLesson } from './data/practiceLessons';
+import useFocusBlur from './hooks/useFocusBlur';
+
+function useBlockClipboardAndSelection() {
+  useEffect(() => {
+    // Disable cut, copy, paste everywhere
+    const handler = e => e.preventDefault();
+
+    window.addEventListener('copy', handler, true);
+    window.addEventListener('cut', handler, true);
+    window.addEventListener('paste', handler, true);
+
+    // Disable selection
+    const css = document.createElement('style');
+    css.innerText = `
+      *::selection { background: transparent !important; }
+      body, html, * {
+        user-select: none !important;
+        -webkit-user-select: none !important;
+        -ms-user-select: none !important;
+        -moz-user-select: none !important;
+      }
+      input, textarea, [contenteditable] {
+        user-select: text !important;
+        -webkit-user-select: text !important;
+        -ms-user-select: text !important;
+        -moz-user-select: text !important;
+      }
+    `;
+    document.head.appendChild(css);
+
+    return () => {
+      window.removeEventListener('copy', handler, true);
+      window.removeEventListener('cut', handler, true);
+      window.removeEventListener('paste', handler, true);
+      css.remove();
+    };
+  }, []);
+}
+
+function useBlockRightClick() {
+  useEffect(() => {
+    const blockContext = e => {
+      // Allow right click only in code editors
+      const isEditor = e.target.closest('.code-editor');
+      if (!isEditor) {
+        e.preventDefault();
+      }
+    };
+    window.addEventListener('contextmenu', blockContext, { capture: true });
+    return () => window.removeEventListener('contextmenu', blockContext, { capture: true });
+  }, []);
+}
+
 
 export default function App() {
+  useBlockRightClick();
+  useBlockClipboardAndSelection();
   const [currentPage, setCurrentPage] = useState('home');
   const [selectedLesson, setSelectedLesson] = useState(null);
 
@@ -71,19 +126,19 @@ export default function App() {
         />;
 
       case 'practice':
-        return <PracticeLessonViewer
-          lesson={selectedLesson === 'html-navbar' ? navbarLesson : formLesson}
-          onBack={() => setCurrentPage('courses')}
-          onNext={() => {
-            setCurrentPage('courses');
-          }}
-        />;
+        return (
+          <ProtectedLesson
+            lesson={selectedLesson === 'html-navbar' ? navbarLesson : formLesson}
+            onBack={() => setCurrentPage('courses')}
+            onNext={() => setCurrentPage('courses')}
+          />
+        );
 
       default:
         return <HomePage onNavigate={setCurrentPage} courses={courses} />;
     }
   };
-
+  useFocusBlur('body', 6);
   return (
     <div className="min-h-screen bg-gray-50">
       {renderPage()}
@@ -94,8 +149,7 @@ export default function App() {
 // Home Page Component
 function HomePage({ onNavigate, courses }) {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
-      {/* Header */}
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">      {/* Header */}
       <header className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
           <h1 className="text-2xl font-bold text-gray-900">🎓 DEV-Portal LMS</h1>
@@ -222,8 +276,8 @@ function CoursesPage({ onNavigate, courses, onSelectLesson }) {
                   <div className="flex items-start justify-between mb-4">
                     <h4 className="text-lg font-semibold">{lesson.title}</h4>
                     <span className={`px-3 py-1 text-sm rounded-full ${lesson.difficulty === 'Easy' ? 'bg-green-100 text-green-700' :
-                        lesson.difficulty === 'Medium' ? 'bg-yellow-100 text-yellow-700' :
-                          'bg-red-100 text-red-700'
+                      lesson.difficulty === 'Medium' ? 'bg-yellow-100 text-yellow-700' :
+                        'bg-red-100 text-red-700'
                       }`}>
                       {lesson.difficulty}
                     </span>

@@ -8,6 +8,13 @@ const app = express();
 // Middleware
 app.use(cors({ origin: process.env.FRONTEND_URL || '*' }));
 app.use(express.json());
+app.use((req, res, next) => {
+    res.setHeader('Cache-Control', 'no-store');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), clipboard-read=(), clipboard-write=()');
+    next();
+});
 
 // MongoDB Connection
 mongoose.connect(process.env.MONGODB_URI)
@@ -16,7 +23,13 @@ mongoose.connect(process.env.MONGODB_URI)
 
 // Routes
 const executeRoute = require('./routes/execute');
-app.use('/api/execute', executeRoute);
+const { router: hiltRouter, verifyHilt } = require('./routes/hilt');
+
+// HILT Route
+app.use('/api/hilt', hiltRouter);
+
+// Protected Routes
+app.use('/api/execute', verifyHilt, executeRoute);
 
 // Health Check
 app.get('/api/health', (req, res) => {
