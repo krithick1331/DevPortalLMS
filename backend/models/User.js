@@ -26,6 +26,15 @@ const userSchema = new mongoose.Schema({
         required: [true, 'Last name is required'],
         trim: true
     },
+    role: {
+        type: String,
+        enum: ['student', 'admin'],
+        default: 'student'
+    },
+    active: {
+        type: Boolean,
+        default: true
+    },
     points: { type: Number, default: 0 },
     streak: { type: Number, default: 0 },
     lastActivity: { type: Date, default: Date.now }
