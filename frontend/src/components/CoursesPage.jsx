@@ -1,5 +1,5 @@
 import { useState } from 'react';
-// import Layout from './Layout';
+import Layout from './Layout';
 import { courses } from '../data/courses'; // CHANGED from mockData
 import { Search, Filter } from 'lucide-react';
 

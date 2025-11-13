@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-// import Layout from './Layout';
-import { courses, lessonContent } from '../data/courses';
+import Layout from './Layout';
+import { courses } from '../data/courses';
+import { lessons as practiceLessons } from '../data/practiceLessons';
 import { ChevronRight, ChevronLeft, Play, CheckCircle, Lightbulb, Award, BookOpen } from 'lucide-react';
 
 export default function LessonViewer({ courseId, lessonId, onBack, onNavigate }) {
@@ -13,11 +14,12 @@ export default function LessonViewer({ courseId, lessonId, onBack, onNavigate })
     const course = courses.find(c => c.id === courseId);
     const lessons = course?.lessons || [];
     const lesson = lessons.find(l => l.id === lessonId);
-    const content = lessonContent[lessonId];
+    const content = practiceLessons.find(l => l.id === lessonId);
 
     useEffect(() => {
-        if (content) {
-            setCode(content.starterCode || '');
+        if (content && content.starterCode) {
+            // starterCode is an object with html, css, js properties
+            setCode(content.starterCode.html || '');
         }
     }, [lessonId, content]);
 
@@ -139,34 +141,10 @@ export default function LessonViewer({ courseId, lessonId, onBack, onNavigate })
                                         <BookOpen className="w-5 h-5 text-green-700" />
                                         <h2 className="text-2xl font-bold text-gray-900 m-0">{content.title}</h2>
                                     </div>
-                                    <p className="text-gray-600">{content.description}</p>
 
                                     <div className="bg-gray-50 rounded-lg p-6 mb-6">
-                                        <div dangerouslySetInnerHTML={{
-                                            __html: content.content
-                                                .replace(/\n/g, '<br />')
-                                                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-                                        }} />
+                                        <p className="text-gray-700 whitespace-pre-wrap">{content.instructions}</p>
                                     </div>
-
-                                    {content.testCases && content.testCases.length > 0 && (
-                                        <div className="mb-6">
-                                            <h3 className="text-lg font-semibold text-gray-900 mb-3">Test Cases</h3>
-                                            <div className="space-y-3">
-                                                {content.testCases.map((test, index) => (
-                                                    <div key={index} className="bg-gray-50 rounded-lg p-4">
-                                                        <p className="text-sm font-medium text-gray-900 mb-2">Test Case {index + 1}</p>
-                                                        <p className="text-sm text-gray-600">
-                                                            <span className="font-medium">Input:</span> {test.input}
-                                                        </p>
-                                                        <p className="text-sm text-gray-600">
-                                                            <span className="font-medium">Expected Output:</span> {test.expected}
-                                                        </p>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    )}
 
                                     <div className="space-y-4">
                                         <button

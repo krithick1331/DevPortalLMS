@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import ExperimentViewer from './ExperimentViewer';
+import { lessons as practiceLessons } from '../data/practiceLessons';
 
 export default function ExperimentList({ lesson, hiltToken, quizPassed }) {
     const [selectedExperiment, setSelectedExperiment] = useState(null);
@@ -163,8 +164,8 @@ export default function ExperimentList({ lesson, hiltToken, quizPassed }) {
                                 <button
                                     onClick={() => setSelectedExperiment(exp)}
                                     className={`px-6 py-2 rounded-lg font-semibold transition ${isPassed
-                                            ? 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                                            : 'bg-blue-600 text-white hover:bg-blue-700'
+                                        ? 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                                        : 'bg-blue-600 text-white hover:bg-blue-700'
                                         }`}
                                 >
                                     {isPassed ? 'View Solution' : attempts > 0 ? 'Retry' : 'Start'}

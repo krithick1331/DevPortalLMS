@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
-// import Layout from './Layout';
+import Layout from './Layout';
 import { courses, mockEvents } from '../data/courses'; // CHANGED from mockData
 
 export default function Dashboard({ onNavigate }) {

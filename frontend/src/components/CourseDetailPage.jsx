@@ -1,4 +1,4 @@
-﻿// import Layout from './Layout';
+﻿import Layout from './Layout';
 import { courses } from '../data/courses';
 
 export default function CourseDetailPage({ courseId, onSelectLesson, onBack, onNavigate }) {

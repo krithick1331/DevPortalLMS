@@ -3,9 +3,13 @@ import CodeMirror from '@uiw/react-codemirror';
 import { javascript } from '@codemirror/lang-javascript';
 import { html } from '@codemirror/lang-html';
 import { css } from '@codemirror/lang-css';
+import { lessons as practiceLessons } from '../data/practiceLessons';
 
 export default function ExperimentViewer({ experiment, lesson, hiltToken, onExperimentPass }) {
-    const [code, setCode] = useState(experiment.starterCode || '');
+    const lessonDetail = practiceLessons.find(l => l.id === experiment?.id);
+    const instructions = lessonDetail?.instructions || '';
+    const starterCode = lessonDetail?.starterCode || {};
+    const [code, setCode] = useState(starterCode.html || experiment.starterCode || '');
     const [output, setOutput] = useState('');
     const [testResults, setTestResults] = useState([]);
     const [running, setRunning] = useState(false);
