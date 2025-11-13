@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import Logo from '../assets/code-img.svg';
+// REMOVED: import Logo from '../assets/code-img.svg';
 import { AlertCircle } from 'lucide-react';
 
 export default function LoginPage({ onNavigateToForget, onLoginSuccess }) {
@@ -33,26 +33,26 @@ export default function LoginPage({ onNavigateToForget, onLoginSuccess }) {
                 <div className="max-w-xl text-yellow-300">
                     <h1 className="text-5xl font-bold mb-8">Welcome to DEV-Portal</h1>
                     <p className="text-xl mb-8 text-justify leading-relaxed">
-                        The <span className="font-semibold">Web Development Learning Management System (DEV-Portal)</span> is your dedicated online platform designed to elevate your programming skills and academic journey. DEV-Portal offers a comprehensive, user-friendly environment tailored to support your growth.
+                        The <span className="font-semibold">Web Development Learning Management System (DEV-Portal)</span> is your dedicated online platform designed to elevate your programming skills and academic journey.
                     </p>
 
                     <h2 className="text-3xl font-bold mb-4">DEV - Portal Provides</h2>
                     <ul className="space-y-4 text-lg">
                         <li className="flex items-start">
                             <span className="mr-3">✓</span>
-                            <span>A vast collection of carefully curated coding challenges and problems spanning various difficulty levels.</span>
+                            <span>A vast collection of carefully curated coding challenges and problems.</span>
                         </li>
                         <li className="flex items-start">
                             <span className="mr-3">✓</span>
-                            <span>Real-time code compilation and execution to instantly test and validate your solutions.</span>
+                            <span>Real-time code compilation and execution to test solutions.</span>
                         </li>
                         <li className="flex items-start">
                             <span className="mr-3">✓</span>
-                            <span>Detailed progress tracking and personalized feedback to help you identify strengths and areas for improvement.</span>
+                            <span>Detailed progress tracking and personalized feedback.</span>
                         </li>
                         <li className="flex items-start">
                             <span className="mr-3">✓</span>
-                            <span>Resources and tools aligned with competitive programming and industry-relevant software development practices.</span>
+                            <span>Industry-relevant software development practices.</span>
                         </li>
                     </ul>
                 </div>
@@ -62,19 +62,16 @@ export default function LoginPage({ onNavigateToForget, onLoginSuccess }) {
             <div className="w-full lg:w-1/2 bg-yellow-400 flex items-center justify-center p-12">
                 <div className="w-full max-w-md">
                     <div className="bg-gradient-to-b from-green-100 to-green-50 rounded-3xl p-8 shadow-xl">
-                        {/* Logo */}
+                        {/* Logo - CHANGED to text instead of image */}
                         <div className="flex justify-center mb-8">
                             <div className="w-32 h-32 bg-white rounded-full flex items-center justify-center shadow-lg">
-                                <div className="text-center">
-                                    <div className="w-24 h-24 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center">
-                                        <img src={Logo} alt="Logo" className="w-12 h-12" />
-                                    </div>
+                                <div className="w-24 h-24 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center">
+                                    <span className="text-white text-3xl font-bold">DEV</span>
                                 </div>
                             </div>
                         </div>
 
                         <form onSubmit={handleSubmit} className="space-y-6">
-                            {/* Error Message */}
                             {error && (
                                 <div className="bg-red-50 border-2 border-red-300 rounded-lg p-4 flex items-start gap-3">
                                     <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
@@ -82,7 +79,6 @@ export default function LoginPage({ onNavigateToForget, onLoginSuccess }) {
                                 </div>
                             )}
 
-                            {/* Email Input */}
                             <div>
                                 <input
                                     type="email"
@@ -95,7 +91,6 @@ export default function LoginPage({ onNavigateToForget, onLoginSuccess }) {
                                 />
                             </div>
 
-                            {/* Password Input */}
                             <div>
                                 <input
                                     type="password"
@@ -118,7 +113,6 @@ export default function LoginPage({ onNavigateToForget, onLoginSuccess }) {
                                 </div>
                             </div>
 
-                            {/* Submit Button */}
                             <button
                                 type="submit"
                                 disabled={loading}
@@ -135,7 +129,6 @@ export default function LoginPage({ onNavigateToForget, onLoginSuccess }) {
                             </button>
                         </form>
 
-                        {/* Info Text */}
                         <div className="mt-6 text-center">
                             <p className="text-sm text-gray-600">
                                 Don't have an account? Contact your administrator.
