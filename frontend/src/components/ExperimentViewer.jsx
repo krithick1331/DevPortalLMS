@@ -42,13 +42,59 @@ export default function ExperimentViewer({ experiment, lesson, hiltToken, onExpe
         }
     };
 
+    // Normalize tests: prefer explicit `experiment.tests`, then lessonDetail.tests,
+    // then convert legacy `lessonDetail.testCases` into `tests` that can be executed.
+    const buildTestsFromTestCases = (testCases, sampleCode) => {
+        // try to detect a function name from sampleCode (starter JS)
+        const jsSample = sampleCode || '';
+        const fnMatch = jsSample.match(/function\s+(\w+)\s*\(/) || jsSample.match(/const\s+(\w+)\s*=\s*\(/) || jsSample.match(/let\s+(\w+)\s*=\s*\(/);
+        const fnName = fnMatch ? fnMatch[1] : null;
+
+        return testCases.map(tc => {
+            // prepare args: split by comma if present
+            const rawInput = (tc.input || '').toString();
+            const args = rawInput === '' ? [] : rawInput.split(',').map(s => s.trim());
+
+            // build invocation string
+            let invoke;
+            if (fnName) {
+                // call detected function with parsed args
+                const argsStr = args.map(a => {
+                    // if numeric-like, leave as number, else wrap as string
+                    return /^-?\d+(\.\d+)?$/.test(a) ? a : JSON.stringify(a.replace(/^['\"]|['\"]$/g, ''));
+                }).join(', ');
+                invoke = `typeof ${fnName} === 'function' ? ${fnName}(${argsStr}) : undefined`;
+            } else {
+                // fallback: try to evaluate expression from input
+                const single = args[0] ? (/^-?\d+(\.\d+)?$/.test(args[0]) ? args[0] : JSON.stringify(args[0].replace(/^['\"]|['\"]$/g, ''))) : 'undefined';
+                invoke = single;
+            }
+
+            // expected normalization
+            const expectedRaw = (tc.expected || '').toString();
+            const expectedIsBool = /^(true|false)$/.test(expectedRaw.toLowerCase());
+            const expectedIsNumber = /^-?\d+(\.\d+)?$/.test(expectedRaw);
+            const expectedVal = expectedIsBool ? expectedRaw.toLowerCase() : (expectedIsNumber ? expectedRaw : JSON.stringify(expectedRaw.replace(/^['\"]|['\"]$/g, '')));
+
+            // build testCode string: eval user code then return comparison
+            const testCode = `try{ eval(code);\n  const result = ${invoke};\n  return String(result) === String(${expectedVal}); }catch(e){ return false; }`;
+
+            return {
+                description: tc.description || `Input: ${tc.input} => ${tc.expected}`,
+                testCode
+            };
+        });
+    };
+
+    const tests = experiment.tests || lessonDetail?.tests || (lessonDetail?.testCases ? buildTestsFromTestCases(lessonDetail.testCases, starterCode.js || '') : []);
+
     const runTests = () => {
         setRunning(true);
         setOutput('Running tests...\n');
 
         try {
             // Run each test
-            const results = experiment.tests.map((test, idx) => {
+            const results = tests.map((test, idx) => {
                 try {
                     // Execute test function with user code
                     const testFn = new Function('code', test.testCode);
@@ -56,7 +102,7 @@ export default function ExperimentViewer({ experiment, lesson, hiltToken, onExpe
 
                     return {
                         description: test.description,
-                        passed: result,
+                        passed: !!result,
                         error: null
                     };
                 } catch (error) {
@@ -211,7 +257,7 @@ export default function ExperimentViewer({ experiment, lesson, hiltToken, onExpe
                     <div className="border-b p-4 bg-gray-50">
                         <h3 className="font-semibold mb-3">Test Requirements:</h3>
                         <ul className="space-y-2">
-                            {experiment.tests.map((test, idx) => (
+                            {tests.map((test, idx) => (
                                 <li key={idx} className="flex items-start gap-2">
                                     {testResults[idx] ? (
                                         <span className={testResults[idx].passed ? 'text-green-600' : 'text-red-600'}>

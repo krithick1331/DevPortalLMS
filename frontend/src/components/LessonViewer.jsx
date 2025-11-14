@@ -244,7 +244,7 @@ export default function LessonViewer({ courseId, lessonId, onBack, onNavigate })
                             <div className="flex space-x-2">
                                 {prevLesson && (
                                     <button
-                                        onClick={() => window.location.href = `#lesson-${prevLesson.id}`}
+                                        onClick={() => onNavigate && onNavigate(courseId, prevLesson.id)}
                                         className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors flex items-center"
                                     >
                                         <ChevronLeft className="w-4 h-4 mr-1" />
@@ -253,7 +253,7 @@ export default function LessonViewer({ courseId, lessonId, onBack, onNavigate })
                                 )}
                                 {nextLesson && (
                                     <button
-                                        onClick={() => window.location.href = `#lesson-${nextLesson.id}`}
+                                        onClick={() => onNavigate && onNavigate(courseId, nextLesson.id)}
                                         className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors flex items-center"
                                     >
                                         Next
