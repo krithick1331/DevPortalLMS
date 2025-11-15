@@ -13,6 +13,7 @@ import Dashboard from './components/Dashboard';
 import CoursesPage from './components/CoursesPage';
 import CourseDetailPage from './components/CourseDetailPage';
 import LessonViewer from './components/LessonViewer';
+import AdminDashboard from './components/AdminDashboard';
 // import ProfilePage from './components/ProfilePage';
 
 // Security hooks
@@ -72,9 +73,8 @@ function AppContent() {
     );
   }
 
-  // ============================================
   // ADMIN DASHBOARD (if admin)
-  // ============================================
+  // -------------------------------------------------
   if (isAdmin) {
     return (
       <div className="min-h-screen bg-gray-50">
@@ -96,14 +96,12 @@ function AppContent() {
         </div>
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="bg-white rounded-lg shadow p-6">
-            <p className="text-gray-600 mb-4">Welcome, {user.firstName} {user.lastName}!</p>
-            <p className="text-gray-500">Admin dashboard under development...</p>
-          </div>
+          <AdminDashboard />
         </div>
       </div>
     );
   }
+
 
   // ============================================
   // NAVIGATION HANDLERS
