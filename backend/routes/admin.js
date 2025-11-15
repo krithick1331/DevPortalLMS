@@ -13,6 +13,54 @@ function isAdmin(req, res, next) {
     next();
 }
 
+// Create new student user
+router.post('/user', authenticateToken, isAdmin, async (req, res) => {
+    try {
+        const { email, password, firstName, lastName } = req.body;
+
+        // Validate input
+        if (!email || !password || !firstName || !lastName) {
+            return res.status(400).json({ error: 'All fields are required' });
+        }
+
+        if (password.length < 6) {
+            return res.status(400).json({ error: 'Password must be at least 6 characters' });
+        }
+
+        // Check if user already exists
+        const existingUser = await User.findOne({ email: email.toLowerCase() });
+        if (existingUser) {
+            return res.status(400).json({ error: 'Email already registered' });
+        }
+
+        // Create new user with role: 'student'
+        const newUser = new User({
+            email: email.toLowerCase(),
+            password,
+            firstName,
+            lastName,
+            role: 'student'
+        });
+
+        await newUser.save();
+
+        res.status(201).json({
+            success: true,
+            message: 'User created successfully',
+            user: {
+                id: newUser._id,
+                email: newUser.email,
+                firstName: newUser.firstName,
+                lastName: newUser.lastName,
+                role: newUser.role
+            }
+        });
+    } catch (error) {
+        console.error('Create user error:', error);
+        res.status(500).json({ error: 'Failed to create user' });
+    }
+});
+
 // Get all students
 router.get('/students', authenticateToken, isAdmin, async (req, res) => {
     try {
