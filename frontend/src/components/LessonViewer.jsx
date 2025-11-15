@@ -36,14 +36,116 @@ export default function LessonViewer({ courseId, lessonId, onBack, onNavigate })
     const handleRunCode = () => {
         setOutput('Running tests...\n');
 
+        if (!content || !content.testCases || content.testCases.length === 0) {
+            setOutput('Code executed successfully!\nThis lesson does not have automated tests yet.');
+            return;
+        }
+
         setTimeout(() => {
-            if (content && content.testCases) {
-                const results = content.testCases.map((test, index) => ({
-                    testCase: index + 1,
-                    input: test.input,
-                    expected: test.expected,
-                    passed: Math.random() > 0.3
-                }));
+            try {
+                const results = content.testCases.map((test, index) => {
+                    try {
+                        // For HTML/CSS lessons with validate function
+                        if (test.validate) {
+                            const passed = test.validate(code);
+                            return {
+                                testCase: index + 1,
+                                input: test.input,
+                                expected: test.expected,
+                                passed: passed
+                            };
+                        }
+
+                        // For JavaScript lessons - execute the code and test it
+                        const userCode = code.trim();
+
+                        if (userCode.length === 0) {
+                            return {
+                                testCase: index + 1,
+                                input: test.input,
+                                expected: test.expected,
+                                passed: false,
+                                error: 'No code provided'
+                            };
+                        }
+
+                        try {
+                            // Extract function from user's code
+                            const funcMatch = userCode.match(/function\s+(\w+)/);
+                            if (!funcMatch) {
+                                throw new Error('No function found in code');
+                            }
+
+                            const functionName = funcMatch[1];
+
+                            // Execute user's code to define the function
+                            const userFunc = new Function(`
+              ${userCode}
+              return ${functionName};
+            `)();
+
+                            // Parse test input and execute function
+                            let actualResult;
+                            if (test.input === '' || test.input === '""' || test.input === "''") {
+                                actualResult = userFunc();
+                            } else {
+                                // Parse comma-separated inputs
+                                const inputs = test.input.split(',').map(inp => {
+                                    inp = inp.trim();
+                                    if (inp.startsWith("'") && inp.endsWith("'")) {
+                                        return inp.slice(1, -1);
+                                    }
+                                    if (inp.startsWith('"') && inp.endsWith('"')) {
+                                        return inp.slice(1, -1);
+                                    }
+                                    return Number(inp);
+                                });
+
+                                actualResult = userFunc(...inputs);
+                            }
+
+                            // Convert result to string for comparison
+                            let actualStr = String(actualResult);
+                            let expectedStr = test.expected.trim();
+
+                            // Remove quotes from expected if present
+                            if (expectedStr.startsWith("'") && expectedStr.endsWith("'")) {
+                                expectedStr = expectedStr.slice(1, -1);
+                            }
+                            if (expectedStr.startsWith('"') && expectedStr.endsWith('"')) {
+                                expectedStr = expectedStr.slice(1, -1);
+                            }
+
+                            const passed = actualStr === expectedStr;
+
+                            return {
+                                testCase: index + 1,
+                                input: test.input || 'none',
+                                expected: test.expected,
+                                actual: actualStr,
+                                passed: passed
+                            };
+
+                        } catch (execError) {
+                            return {
+                                testCase: index + 1,
+                                input: test.input,
+                                expected: test.expected,
+                                passed: false,
+                                error: execError.message
+                            };
+                        }
+
+                    } catch (error) {
+                        return {
+                            testCase: index + 1,
+                            input: test.input,
+                            expected: test.expected,
+                            passed: false,
+                            error: error.message
+                        };
+                    }
+                });
 
                 setTestResults(results);
 
@@ -57,7 +159,12 @@ export default function LessonViewer({ courseId, lessonId, onBack, onNavigate })
                     outputText += `Input: ${result.input}\n`;
                     outputText += `Expected: ${result.expected}\n`;
                     if (!result.passed) {
-                        outputText += `Got: (output differs)\n`;
+                        if (result.actual) {
+                            outputText += `Got: ${result.actual}\n`;
+                        }
+                        if (result.error) {
+                            outputText += `Error: ${result.error}\n`;
+                        }
                     }
                     outputText += '\n';
                 });
@@ -73,11 +180,14 @@ export default function LessonViewer({ courseId, lessonId, onBack, onNavigate })
                 }
 
                 setOutput(outputText);
-            } else {
-                setOutput('Code executed successfully!\nThis lesson does not have automated tests yet.');
+
+            } catch (error) {
+                setOutput(`Error running tests: ${error.message}`);
+                setTestResults([]);
             }
-        }, 1000);
+        }, 500);
     };
+
 
     const handleSubmit = () => {
         const allPassed = testResults.every(r => r.passed);
