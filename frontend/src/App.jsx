@@ -14,6 +14,7 @@ import CoursesPage from './components/CoursesPage';
 import CourseDetailPage from './components/CourseDetailPage';
 import LessonViewer from './components/LessonViewer';
 import AdminDashboard from './components/AdminDashboard';
+import AdminDashboardPage from './pages/AdminDashboard';
 // import ProfilePage from './components/ProfilePage';
 
 // Security hooks
@@ -28,6 +29,7 @@ function AppContent() {
   const [currentPage, setCurrentPage] = useState('login');
   const [selectedCourse, setSelectedCourse] = useState(null);
   const [selectedLesson, setSelectedLesson] = useState(null);
+  const [adminTab, setAdminTab] = useState('overview');
 
   // Apply security hooks globally
   useFocusBlur('body', 6);
@@ -80,7 +82,7 @@ function AppContent() {
       <div className="min-h-screen bg-gray-50">
         <div className="bg-white shadow-sm border-b">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between mb-4">
               <h1 className="text-2xl font-bold text-gray-900">Admin Dashboard</h1>
               <button
                 onClick={() => {
@@ -92,11 +94,27 @@ function AppContent() {
                 Logout
               </button>
             </div>
+            {/* Admin Tabs */}
+            <div className="flex space-x-2 border-b">
+              <button
+                onClick={() => setAdminTab('overview')}
+                className={`px-4 py-2 font-medium border-b-2 transition ${adminTab === 'overview' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-600 hover:text-gray-900'}`}
+              >
+                Analytics
+              </button>
+              <button
+                onClick={() => setAdminTab('cms')}
+                className={`px-4 py-2 font-medium border-b-2 transition ${adminTab === 'cms' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-600 hover:text-gray-900'}`}
+              >
+                Content Management
+              </button>
+            </div>
           </div>
         </div>
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <AdminDashboard />
+          {adminTab === 'overview' && <AdminDashboard />}
+          {adminTab === 'cms' && <AdminDashboardPage />}
         </div>
       </div>
     );

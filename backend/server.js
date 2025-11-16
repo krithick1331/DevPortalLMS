@@ -69,6 +69,7 @@ const experimentRoutes = require('./routes/experiment');
 const practiceLessonRoutes = require('./routes/practiceLessonRoutes');
 const progressRoutes = require('./routes/progress');
 const leaderboardRoutes = require('./routes/leaderboard');
+const lessonsRoute = require('./routes/lessons');
 
 // Public routes
 app.use('/api/hilt', hiltRouter);
@@ -82,6 +83,8 @@ app.use('/api/practice', practiceLessonRoutes);
 app.use('/api/progress', progressRoutes);
 app.use('/api/leaderboard', leaderboardRoutes);
 app.use('/api/execute', verifyHilt, executeRoute);
+// File-based lessons API (admin)
+app.use('/api', lessonsRoute);
 
 // Health Check
 app.get('/api/health', (req, res) => {
