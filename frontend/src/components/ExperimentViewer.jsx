@@ -1,8 +1,5 @@
 import { useState, useEffect } from 'react';
-import CodeMirror from '@uiw/react-codemirror';
-import { javascript } from '@codemirror/lang-javascript';
-import { html } from '@codemirror/lang-html';
-import { css } from '@codemirror/lang-css';
+import CodeEditor from './CodeEditor';
 import { lessons as practiceLessons } from '../data/practiceLessons';
 
 export default function ExperimentViewer({ experiment, lesson, hiltToken, onExperimentPass }) {
@@ -11,6 +8,8 @@ export default function ExperimentViewer({ experiment, lesson, hiltToken, onExpe
     const starterCode = lessonDetail?.starterCode || {};
     const [code, setCode] = useState(starterCode.html || experiment.starterCode || '');
     const [output, setOutput] = useState('');
+    const [previewHTML, setPreviewHTML] = useState('');
+    const [consoleOutput, setConsoleOutput] = useState([]);
     const [testResults, setTestResults] = useState([]);
     const [running, setRunning] = useState(false);
     const [submitted, setSubmitted] = useState(false);
@@ -40,6 +39,33 @@ export default function ExperimentViewer({ experiment, lesson, hiltToken, onExpe
         } catch (error) {
             console.error('Failed to load experiment progress:', error);
         }
+    };
+
+    // Generate preview HTML for iframe (use for HTML/CSS/JS experiments)
+    const generatePreview = () => {
+        // If experiment provides starter html, prefer that; otherwise use code as html
+        const htmlContent = (experiment.language === 'html') ? code : (starterCode.html || '');
+        const cssContent = starterCode.css || '';
+        const jsContent = (experiment.language === 'javascript') ? code : (starterCode.js || '');
+
+        const combined = `<!doctype html><html><head><meta charset="utf-8"><style>${cssContent}</style></head><body>${htmlContent}
+<script>
+// Capture console.log and errors and post to parent
+(function(){
+    const oldLog = console.log;
+    console.log = function(...args){
+        try{ window.parent.postMessage({ type: 'console', data: args.map(a=>String(a)).join(' ') }, '*'); }catch(e){}
+        oldLog.apply(console, args);
+    };
+    window.onerror = function(msg, url, line, col, err){
+        try{ window.parent.postMessage({ type: 'error', data: msg + ' (Line: ' + line + ')' }, '*'); }catch(e){}
+        return false;
+    };
+})();
+\n${jsContent}
+</script></body></html>`;
+
+        setPreviewHTML(combined);
     };
 
     // Normalize tests: prefer explicit `experiment.tests`, then lessonDetail.tests,
@@ -91,6 +117,8 @@ export default function ExperimentViewer({ experiment, lesson, hiltToken, onExpe
     const runTests = () => {
         setRunning(true);
         setOutput('Running tests...\n');
+        // refresh preview when running tests
+        try { generatePreview(); } catch (e) { /* ignore */ }
 
         try {
             // Run each test
@@ -135,6 +163,21 @@ export default function ExperimentViewer({ experiment, lesson, hiltToken, onExpe
             setRunning(false);
         }
     };
+
+    // Listen for console messages from iframe
+    useEffect(() => {
+        const handleMessage = (event) => {
+            if (!event?.data) return;
+            if (event.data.type === 'console') {
+                setConsoleOutput(prev => [...prev, { type: 'log', message: event.data.data }]);
+            } else if (event.data.type === 'error') {
+                setConsoleOutput(prev => [...prev, { type: 'error', message: event.data.data }]);
+            }
+        };
+
+        window.addEventListener('message', handleMessage);
+        return () => window.removeEventListener('message', handleMessage);
+    }, []);
 
     const handleSubmit = async () => {
         if (testResults.length === 0) {
@@ -191,15 +234,7 @@ export default function ExperimentViewer({ experiment, lesson, hiltToken, onExpe
         }
     };
 
-    // Get language mode
-    const getLanguageMode = () => {
-        switch (experiment.language) {
-            case 'html': return html();
-            case 'css': return css();
-            case 'javascript':
-            default: return javascript();
-        }
-    };
+    // (Using Monaco-based CodeEditor, which receives language as a string)
 
     return (
         <div className="h-full flex flex-col">
@@ -225,12 +260,10 @@ export default function ExperimentViewer({ experiment, lesson, hiltToken, onExpe
                         <span className="text-sm text-gray-600">{experiment.language.toUpperCase()}</span>
                     </div>
                     <div className="flex-1 overflow-auto">
-                        <CodeMirror
+                        <CodeEditor
                             value={code}
-                            height="100%"
-                            extensions={[getLanguageMode()]}
                             onChange={(value) => setCode(value)}
-                            theme="light"
+                            language={experiment.language}
                         />
                     </div>
                     <div className="p-4 bg-gray-50 border-t flex gap-3">
@@ -272,9 +305,34 @@ export default function ExperimentViewer({ experiment, lesson, hiltToken, onExpe
                         </ul>
                     </div>
 
-                    {/* Output Console */}
-                    <div className="flex-1 p-4 font-mono text-sm overflow-auto bg-gray-900 text-gray-100">
-                        <pre>{output || 'Run tests to see output here...'}</pre>
+                    {/* Output Preview */}
+                    <div className="flex-1 flex flex-col">
+                        <div className="bg-gray-100 px-4 py-2 border-t font-semibold">Output Preview</div>
+                        <div className="flex-1 bg-white">
+                            <iframe
+                                srcDoc={previewHTML}
+                                title="output-preview"
+                                sandbox="allow-scripts"
+                                className="w-full h-full border-0"
+                            />
+                        </div>
+
+                        {/* Console Panel */}
+                        <div className="h-40 border-t bg-gray-900 text-gray-100 font-mono text-sm overflow-auto p-2">
+                            <div className="flex justify-between items-center mb-2">
+                                <span className="text-sm">Console Output</span>
+                                <button onClick={() => setConsoleOutput([])} className="text-xs px-2 py-1 bg-gray-700 rounded">Clear</button>
+                            </div>
+                            {consoleOutput.length === 0 ? (
+                                <div className="text-gray-500">Console output will appear here...</div>
+                            ) : (
+                                consoleOutput.map((log, i) => (
+                                    <div key={i} className={`py-1 ${log.type === 'error' ? 'text-red-400' : 'text-green-400'}`}>
+                                        {log.type === 'error' ? '❌' : '▶'} {log.message}
+                                    </div>
+                                ))
+                            )}
+                        </div>
                     </div>
                 </div>
             </div>
