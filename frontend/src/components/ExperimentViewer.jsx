@@ -68,6 +68,20 @@ export default function ExperimentViewer({ experiment, lesson, hiltToken, onExpe
         setPreviewHTML(combined);
     };
 
+    // Auto-generate preview when code changes (with debounce)
+    useEffect(() => {
+        const timeoutId = setTimeout(() => {
+            generatePreview();
+        }, 300); // Debounce for 300ms
+
+        return () => clearTimeout(timeoutId);
+    }, [code, starterCode]); // Regenerate whenever code or starterCode changes
+
+    // Generate preview on initial load
+    useEffect(() => {
+        generatePreview();
+    }, []); // Run once on mount
+
     // Normalize tests: prefer explicit `experiment.tests`, then lessonDetail.tests,
     // then convert legacy `lessonDetail.testCases` into `tests` that can be executed.
     const buildTestsFromTestCases = (testCases, sampleCode) => {
@@ -267,6 +281,13 @@ export default function ExperimentViewer({ experiment, lesson, hiltToken, onExpe
                         />
                     </div>
                     <div className="p-4 bg-gray-50 border-t flex gap-3">
+                        <button
+                            onClick={generatePreview}
+                            disabled={running || !code}
+                            className="flex-1 px-6 py-2 bg-gray-600 text-white rounded-lg font-semibold hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                        >
+                            ▶ Run Code
+                        </button>
                         <button
                             onClick={runTests}
                             disabled={running || !code}
