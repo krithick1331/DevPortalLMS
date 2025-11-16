@@ -37,6 +37,10 @@ export default function AdminDashboard() {
             const analyticsRes = await fetch('http://localhost:3000/api/admin/analytics', {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
+            if (!analyticsRes.ok) {
+                console.error('Analytics fetch failed:', analyticsRes.status, analyticsRes.statusText);
+                throw new Error(`Analytics fetch failed: ${analyticsRes.status}`);
+            }
             const analyticsData = await analyticsRes.json();
             setAnalytics(analyticsData);
 
@@ -44,6 +48,10 @@ export default function AdminDashboard() {
             const studentsRes = await fetch('http://localhost:3000/api/admin/students', {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
+            if (!studentsRes.ok) {
+                console.error('Students fetch failed:', studentsRes.status, studentsRes.statusText);
+                throw new Error(`Students fetch failed: ${studentsRes.status}`);
+            }
             const studentsData = await studentsRes.json();
             setStudents(studentsData.students || []);
         } catch (error) {

@@ -63,12 +63,24 @@ mongoose.connect(process.env.MONGODB_URI)
 const executeRoute = require('./routes/execute');
 const { router: hiltRouter, verifyHilt } = require('./routes/hilt');
 const { router: authRouter } = require('./routes/auth');
+const adminRoutes = require('./routes/admin');
+const courseRoutes = require('./routes/courseRoutes');
+const experimentRoutes = require('./routes/experiment');
+const practiceLessonRoutes = require('./routes/practiceLessonRoutes');
+const progressRoutes = require('./routes/progress');
+const leaderboardRoutes = require('./routes/leaderboard');
 
 // Public routes
 app.use('/api/hilt', hiltRouter);
 app.use('/api/auth', authRouter);
 
 // Protected routes
+app.use('/api/admin', adminRoutes);
+app.use('/api/courses', courseRoutes);
+app.use('/api/experiments', experimentRoutes);
+app.use('/api/practice', practiceLessonRoutes);
+app.use('/api/progress', progressRoutes);
+app.use('/api/leaderboard', leaderboardRoutes);
 app.use('/api/execute', verifyHilt, executeRoute);
 
 // Health Check
