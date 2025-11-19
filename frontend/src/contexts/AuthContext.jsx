@@ -6,6 +6,7 @@ export function AuthProvider({ children }) {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
     const [token, setToken] = useState(localStorage.getItem('token'));
+    const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
     useEffect(() => {
         if (token) {
@@ -17,7 +18,7 @@ export function AuthProvider({ children }) {
 
     const fetchUser = async () => {
         try {
-            const res = await fetch('http://localhost:3000/api/auth/me', {
+            const res = await fetch(`${API_BASE}/api/auth/me`, {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }
@@ -44,7 +45,7 @@ export function AuthProvider({ children }) {
 
     const login = async (email, password) => {
         try {
-            const res = await fetch('http://localhost:3000/api/auth/login', {
+            const res = await fetch(`${API_BASE}/api/auth/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, password })
@@ -71,7 +72,7 @@ export function AuthProvider({ children }) {
 
     const register = async (formData) => {
         try {
-            const res = await fetch('http://localhost:3000/api/auth/register', {
+            const res = await fetch(`${API_BASE}/api/auth/register`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(formData)

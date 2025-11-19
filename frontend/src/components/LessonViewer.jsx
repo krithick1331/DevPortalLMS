@@ -10,6 +10,8 @@ export default function LessonViewer({ courseId, lessonId, onBack, onNavigate })
     const [testResults, setTestResults] = useState([]);
     const [showHints, setShowHints] = useState(false);
     const [showSolution, setShowSolution] = useState(false);
+    const [previewHTML, setPreviewHTML] = useState('');
+    const [consoleOutput, setConsoleOutput] = useState([]);
 
     const course = courses.find(c => c.id === courseId);
     const lessons = course?.lessons || [];
@@ -22,6 +24,52 @@ export default function LessonViewer({ courseId, lessonId, onBack, onNavigate })
             setCode(content.starterCode.html || '');
         }
     }, [lessonId, content]);
+
+    // Generate preview HTML for iframe
+    const generatePreview = () => {
+        const htmlContent = content?.starterCode?.html || code || '';
+        const cssContent = content?.starterCode?.css || '';
+        const jsContent = content?.starterCode?.js || '';
+
+        const combined = `<!doctype html><html><head><meta charset="utf-8"><style>${cssContent}</style></head><body>${htmlContent}
+<script>
+// capture console.log and errors
+(function(){
+  const oldLog = console.log;
+  console.log = function(...args){
+    try{ window.parent.postMessage({ type: 'console', data: args.map(a=>String(a)).join(' ') }, '*'); }catch(e){}
+    oldLog.apply(console, args);
+  };
+  window.onerror = function(msg, url, line, col, err){
+    try{ window.parent.postMessage({ type: 'error', data: msg + ' (Line: ' + line + ')' }, '*'); }catch(e){}
+    return false;
+  };
+})();
+\n${jsContent}
+</script></body></html>`;
+
+        setPreviewHTML(combined);
+    };
+
+    // Auto-generate preview when code or starterCode changes (debounced)
+    useEffect(() => {
+        const id = setTimeout(() => generatePreview(), 300);
+        return () => clearTimeout(id);
+    }, [code, content?.starterCode]);
+
+    // Listen for console messages from iframe
+    useEffect(() => {
+        const handler = (event) => {
+            if (!event?.data) return;
+            if (event.data.type === 'console') {
+                setConsoleOutput(prev => [...prev, { type: 'log', message: event.data.data }]);
+            } else if (event.data.type === 'error') {
+                setConsoleOutput(prev => [...prev, { type: 'error', message: event.data.data }]);
+            }
+        };
+        window.addEventListener('message', handler);
+        return () => window.removeEventListener('message', handler);
+    }, []);
 
     if (!course || !lesson) {
         return (
@@ -321,13 +369,22 @@ export default function LessonViewer({ courseId, lessonId, onBack, onNavigate })
                         <div className="border-b border-gray-700 p-4">
                             <div className="flex items-center justify-between">
                                 <h3 className="text-sm font-semibold text-gray-300">Code Editor</h3>
-                                <button
-                                    onClick={handleRunCode}
-                                    className="flex items-center space-x-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
-                                >
-                                    <Play className="w-4 h-4" />
-                                    <span>Run Tests</span>
-                                </button>
+                                <div className="flex items-center space-x-2">
+                                    <button
+                                        onClick={generatePreview}
+                                        className="flex items-center space-x-2 px-3 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
+                                    >
+                                        <Play className="w-4 h-4" />
+                                        <span>Run Code</span>
+                                    </button>
+                                    <button
+                                        onClick={handleRunCode}
+                                        className="flex items-center space-x-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
+                                    >
+                                        <Play className="w-4 h-4" />
+                                        <span>Run Tests</span>
+                                    </button>
+                                </div>
                             </div>
                         </div>
 
@@ -341,12 +398,34 @@ export default function LessonViewer({ courseId, lessonId, onBack, onNavigate })
                             />
                         </div>
 
-                        <div className="border-t border-gray-700 h-64 overflow-y-auto">
-                            <div className="p-4">
-                                <h3 className="text-sm font-semibold text-gray-300 mb-2">Output</h3>
-                                <pre className="text-sm text-gray-300 whitespace-pre-wrap font-mono">
-                                    {output || 'Run your code to see the output...'}
-                                </pre>
+                        <div className="border-t border-gray-700 h-64 overflow-hidden bg-white">
+                            <div className="p-0 h-full flex flex-col">
+                                <div className="px-4 py-2 border-b bg-gray-50">
+                                    <h3 className="text-sm font-semibold text-gray-700 mb-0">Output Preview</h3>
+                                </div>
+                                <div className="flex-1">
+                                    <iframe
+                                        srcDoc={previewHTML}
+                                        title="lesson-output"
+                                        sandbox="allow-scripts"
+                                        className="w-full h-full border-0"
+                                    />
+                                </div>
+                                <div className="h-24 border-t bg-gray-900 text-gray-100 font-mono text-sm overflow-auto p-2">
+                                    <div className="flex justify-between items-center mb-2">
+                                        <span className="text-sm">Console Output</span>
+                                        <button onClick={() => setConsoleOutput([])} className="text-xs px-2 py-1 bg-gray-700 rounded">Clear</button>
+                                    </div>
+                                    {consoleOutput.length === 0 ? (
+                                        <div className="text-gray-500">Console output will appear here...</div>
+                                    ) : (
+                                        consoleOutput.map((log, i) => (
+                                            <div key={i} className={`py-1 ${log.type === 'error' ? 'text-red-400' : 'text-green-400'}`}>
+                                                {log.type === 'error' ? '❌' : '▶'} {log.message}
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
                             </div>
                         </div>
 

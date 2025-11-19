@@ -1,21 +1,53 @@
+// backend/models/Progress.js
+
 const mongoose = require('mongoose');
 
 const progressSchema = new mongoose.Schema({
     userId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
-        required: true
+        required: true,
+        unique: true
     },
-    lessonId: { type: String, required: true },
-    courseId: { type: String, required: true },
-    completed: { type: Boolean, default: false },
-    completedAt: { type: Date, default: null },
-    pointsEarned: { type: Number, default: 0 },
-    code: { type: String, default: '' },
-    attempts: { type: Number, default: 0 },
-    startedAt: { type: Date, default: Date.now }
-}, { timestamps: true });
+    completedLessons: [{
+        type: String // Lesson IDs
+    }],
+    courseProgress: {
+        ites: {
+            unlocked: { type: Boolean, default: true },
+            completedLessons: [String],
+            completedAt: Date
+        },
+        wp: {
+            unlocked: { type: Boolean, default: false },
+            completedLessons: [String],
+            completedAt: Date
+        },
+        ws: {
+            unlocked: { type: Boolean, default: false },
+            completedLessons: [String],
+            completedAt: Date
+        }
+    },
+    recentSubmissions: [{
+        lessonId: String,
+        courseId: String,
+        passed: Boolean,
+        timestamp: Date,
+        attempts: Number
+    }],
+    lastActivity: {
+        type: Date,
+        default: Date.now
+    }
+}, {
+    timestamps: true
+});
 
-progressSchema.index({ userId: 1, lessonId: 1 }, { unique: true });
+// Update lastActivity on save
+progressSchema.pre('save', function (next) {
+    this.lastActivity = Date.now();
+    next();
+});
 
 module.exports = mongoose.model('Progress', progressSchema);
