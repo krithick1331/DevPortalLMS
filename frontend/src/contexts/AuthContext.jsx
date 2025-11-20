@@ -60,7 +60,7 @@ export function AuthProvider({ children }) {
                     ...data.user,
                     initials: `${data.user.firstName[0]}${data.user.lastName[0]}`.toUpperCase()
                 });
-                return { success: true };
+                return { success: true, user: data.user };
             } else {
                 return { success: false, error: data.error };
             }

@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 // REMOVED: import Logo from '../assets/code-img.svg';
 import { AlertCircle } from 'lucide-react';
@@ -8,7 +9,22 @@ export default function LoginPage({ onNavigateToForget, onLoginSuccess }) {
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
-    const { login } = useAuth();
+    const { login, user } = useAuth();
+    const navigate = useNavigate();
+
+    const getDestination = (userInfo) => {
+        if (!userInfo) return '/dashboard';
+        const email = userInfo.email?.toLowerCase() || '';
+        // Treat matching emails (or explicit admin roles) as administrators
+        const adminDetected = userInfo.role === 'admin' || email.includes('admin');
+        return adminDetected ? '/admin' : '/dashboard';
+    };
+
+    useEffect(() => {
+        if (user) {
+            navigate(getDestination(user), { replace: true });
+        }
+    }, [user, navigate]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -18,6 +34,8 @@ export default function LoginPage({ onNavigateToForget, onLoginSuccess }) {
         const result = await login(email, password);
 
         if (result.success) {
+            const destination = getDestination(result.user);
+            navigate(destination, { replace: true });
             onLoginSuccess?.();
         } else {
             setError(result.error || 'Login failed. Please check your credentials.');

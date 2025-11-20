@@ -1,34 +1,236 @@
-import { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+// frontend/src/components/LessonViewer.jsx
+
+import { useState, useEffect, useRef } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { courses } from '../data/courses';
 import { lessons as practiceLessons } from '../data/practiceLessons';
-import { ChevronRight, ChevronLeft, Play, CheckCircle, Lightbulb, Award, BookOpen } from 'lucide-react';
+import { ChevronRight, ChevronLeft, Play, CheckCircle, Lightbulb, BookOpen, AlertTriangle } from 'lucide-react';
 
 export default function LessonViewer() {
     const { lessonId } = useParams();
+    const navigate = useNavigate();
     const [code, setCode] = useState('');
     const [output, setOutput] = useState('');
     const [testResults, setTestResults] = useState([]);
     const [showHints, setShowHints] = useState(false);
-    const [showSolution, setShowSolution] = useState(false);
+    // REMOVED: const [showSolution, setShowSolution] = useState(false);
     const [previewHTML, setPreviewHTML] = useState('');
     const [consoleOutput, setConsoleOutput] = useState([]);
 
-    // Find lesson from practiceLessons (which has full lesson data)
-    const lesson = practiceLessons.find(l => l.id === lessonId);
+    // Anti-cheat states
+    const [tabSwitchCount, setTabSwitchCount] = useState(0);
+    const [warnings, setWarnings] = useState([]);
+    const [currentHintIndex, setCurrentHintIndex] = useState(0);
+    const tabSwitchCountRef = useRef(0);
+    const lastFocusEventRef = useRef({ type: null, group: null, timestamp: 0 });
 
-    if (!lesson) {
+    const course = courses.find(c => c.lessons?.some(l => l.id === lessonId));
+    const lessons = course?.lessons || [];
+    const lesson = lessons.find(l => l.id === lessonId);
+    const content = practiceLessons.find(l => l.id === lessonId);
+    const courseId = course?.id;
+    const lessonTitle = content?.title || lesson?.title || 'Lesson';
+    const lessonDifficulty = lesson?.difficulty || 'Easy';
+    const lessonCompleted = Boolean(lesson?.completed);
+
+    // ==================== ANTI-CHEAT SETUP ====================
+
+    useEffect(() => {
+        setupAntiCheat();
+        return () => cleanupAntiCheat();
+    }, []);
+
+    const setupAntiCheat = () => {
+        // Prevent right-click
+        document.addEventListener('contextmenu', handleContextMenu);
+
+        // Detect tab/window blur
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        window.addEventListener('blur', handleWindowBlur);
+
+        // Prevent certain keyboard shortcuts
+        document.addEventListener('keydown', handleKeyDown);
+
+        // Prevent text selection in instructions
+        document.addEventListener('selectstart', handleSelectStart);
+    };
+
+    const cleanupAntiCheat = () => {
+        document.removeEventListener('contextmenu', handleContextMenu);
+        document.removeEventListener('visibilitychange', handleVisibilityChange);
+        window.removeEventListener('blur', handleWindowBlur);
+        document.removeEventListener('keydown', handleKeyDown);
+        document.removeEventListener('selectstart', handleSelectStart);
+    };
+
+    const handleContextMenu = (e) => {
+        // Allow right-click ONLY in textarea (code editor)
+        const isTextarea = e.target.tagName === 'TEXTAREA';
+        if (!isTextarea) {
+            e.preventDefault();
+            addWarning('⚠️ Right-click is disabled in practice mode');
+            return false;
+        }
+    };
+
+    const recordFocusLoss = (type, message, group = type) => {
+        const now = Date.now();
+        const lastEvent = lastFocusEventRef.current;
+
+        // Skip duplicate notifications that fire back-to-back (e.g., blur + visibilitychange combo)
+        if (lastEvent.group === group && now - lastEvent.timestamp < 500) {
+            return;
+        }
+
+        lastFocusEventRef.current = { type, group, timestamp: now };
+
+        tabSwitchCountRef.current += 1;
+        setTabSwitchCount(tabSwitchCountRef.current);
+        addWarning(`${message} (#${tabSwitchCountRef.current})`);
+        logActivity(type);
+    };
+
+    const handleVisibilityChange = () => {
+        if (document.hidden) {
+            recordFocusLoss('tab_switch', '⚠️ Tab switch detected! Stay focused', 'focus-loss');
+        }
+    };
+
+    const handleWindowBlur = () => {
+        recordFocusLoss('window_blur', '⚠️ Window focus lost', 'focus-loss');
+    };
+
+    const handleKeyDown = (e) => {
+        const isTextarea = e.target.tagName === 'TEXTAREA';
+
+        // Block copy/paste in instructions (not in code editor)
+        if (!isTextarea && ((e.ctrlKey || e.metaKey) && (e.key === 'c' || e.key === 'v'))) {
+            e.preventDefault();
+            addWarning('⚠️ Copy/Paste disabled in instructions');
+            return false;
+        }
+
+        // Block F12 (DevTools)
+        if (e.key === 'F12') {
+            e.preventDefault();
+            addWarning('⚠️ Developer tools not allowed during practice');
+            return false;
+        }
+
+        // Block Ctrl+Shift+I (DevTools)
+        if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'I') {
+            e.preventDefault();
+            addWarning('⚠️ Developer tools not allowed during practice');
+            return false;
+        }
+    };
+
+    const handleSelectStart = (e) => {
+        // Allow selection in textarea and console
+        const isTextarea = e.target.tagName === 'TEXTAREA';
+        const isConsole = e.target.closest('.console-output');
+
+        if (!isTextarea && !isConsole) {
+            e.preventDefault();
+            return false;
+        }
+    };
+
+    const addWarning = (message) => {
+        setWarnings(prev => [...prev, { message, timestamp: new Date() }]);
+
+        // Auto-remove after 5 seconds
+        setTimeout(() => {
+            setWarnings(prev => prev.slice(1));
+        }, 5000);
+    };
+
+    const logActivity = (type) => {
+        console.log(`[Activity Log] ${type} at ${new Date().toISOString()}`);
+        // You can send this to backend if needed
+    };
+
+    // ==================== EXISTING FUNCTIONALITY ====================
+
+    useEffect(() => {
+        if (content && content.starterCode) {
+            setCode(content.starterCode.html || '');
+        }
+    }, [lessonId, content]);
+
+    const generatePreview = () => {
+        const htmlContent = code || content?.starterCode?.html || '';
+        const cssContent = content?.starterCode?.css || '';
+        const jsContent = content?.starterCode?.js || '';
+
+        const combined = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>${cssContent}</style>
+</head>
+<body>
+${htmlContent}
+<script>
+(function(){
+  const oldLog = console.log;
+  console.log = function(...args){
+    try{ 
+      window.parent.postMessage({ 
+        type: 'console', 
+        data: args.map(a=>String(a)).join(' ') 
+      }, '*'); 
+    }catch(e){}
+    oldLog.apply(console, args);
+  };
+  
+  window.onerror = function(msg, url, line, col, err){
+    try{ 
+      window.parent.postMessage({ 
+        type: 'error', 
+        data: msg + ' (Line: ' + line + ')' 
+      }, '*'); 
+    }catch(e){}
+    return false;
+  };
+})();
+
+${jsContent}
+</script>
+</body>
+</html>`;
+
+        setPreviewHTML(combined);
+    };
+
+    // Auto-generate preview
+    useEffect(() => {
+        const id = setTimeout(() => generatePreview(), 300);
+        return () => clearTimeout(id);
+    }, [code, content?.starterCode]);
+
+    // Listen for console messages
+    useEffect(() => {
+        const handler = (event) => {
+            if (!event?.data) return;
+            if (event.data.type === 'console') {
+                setConsoleOutput(prev => [...prev, { type: 'log', message: event.data.data }]);
+            } else if (event.data.type === 'error') {
+                setConsoleOutput(prev => [...prev, { type: 'error', message: event.data.data }]);
+            }
+        };
+
+        window.addEventListener('message', handler);
+        return () => window.removeEventListener('message', handler);
+    }, []);
+
+    if (!lesson && !content) {
         return (
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                 <p>Lesson not found</p>
             </div>
         );
     }
-
-    const content = lesson.content || lesson;
-    const starterHtml = content?.starterCode?.html || '';
-    const starterCss = content?.starterCode?.css || '';
-    const starterJs = content?.starterCode?.js || '';
 
     const handleRunCode = () => {
         setOutput('Running tests...\n');
@@ -42,7 +244,6 @@ export default function LessonViewer() {
             try {
                 const results = content.testCases.map((test, index) => {
                     try {
-                        // For HTML/CSS lessons with validate function
                         if (test.validate) {
                             const passed = test.validate(code);
                             return {
@@ -53,9 +254,7 @@ export default function LessonViewer() {
                             };
                         }
 
-                        // For JavaScript lessons - execute the code and test it
                         const userCode = code.trim();
-
                         if (userCode.length === 0) {
                             return {
                                 testCase: index + 1,
@@ -67,26 +266,21 @@ export default function LessonViewer() {
                         }
 
                         try {
-                            // Extract function from user's code
                             const funcMatch = userCode.match(/function\s+(\w+)/);
                             if (!funcMatch) {
                                 throw new Error('No function found in code');
                             }
-
                             const functionName = funcMatch[1];
 
-                            // Execute user's code to define the function
                             const userFunc = new Function(`
-              ${userCode}
-              return ${functionName};
-            `)();
+                ${userCode}
+                return ${functionName};
+              `)();
 
-                            // Parse test input and execute function
                             let actualResult;
                             if (test.input === '' || test.input === '""' || test.input === "''") {
                                 actualResult = userFunc();
                             } else {
-                                // Parse comma-separated inputs
                                 const inputs = test.input.split(',').map(inp => {
                                     inp = inp.trim();
                                     if (inp.startsWith("'") && inp.endsWith("'")) {
@@ -97,15 +291,12 @@ export default function LessonViewer() {
                                     }
                                     return Number(inp);
                                 });
-
                                 actualResult = userFunc(...inputs);
                             }
 
-                            // Convert result to string for comparison
                             let actualStr = String(actualResult);
                             let expectedStr = test.expected.trim();
 
-                            // Remove quotes from expected if present
                             if (expectedStr.startsWith("'") && expectedStr.endsWith("'")) {
                                 expectedStr = expectedStr.slice(1, -1);
                             }
@@ -122,7 +313,6 @@ export default function LessonViewer() {
                                 actual: actualStr,
                                 passed: passed
                             };
-
                         } catch (execError) {
                             return {
                                 testCase: index + 1,
@@ -132,7 +322,6 @@ export default function LessonViewer() {
                                 error: execError.message
                             };
                         }
-
                     } catch (error) {
                         return {
                             testCase: index + 1,
@@ -145,7 +334,6 @@ export default function LessonViewer() {
                 });
 
                 setTestResults(results);
-
                 const passedCount = results.filter(r => r.passed).length;
                 const totalCount = results.length;
 
@@ -171,13 +359,12 @@ export default function LessonViewer() {
 
                 if (passedCount === totalCount) {
                     outputText += '\n🎉 Congratulations! All tests passed!\n';
-                    outputText += `You earned ${lesson.points} points!\n`;
+                    // REMOVED: points message
                 } else {
                     outputText += '\n⚠️ Some tests failed. Keep trying!\n';
                 }
 
                 setOutput(outputText);
-
             } catch (error) {
                 setOutput(`Error running tests: ${error.message}`);
                 setTestResults([]);
@@ -185,103 +372,53 @@ export default function LessonViewer() {
         }, 500);
     };
 
-
     const handleSubmit = () => {
         const allPassed = testResults.every(r => r.passed);
         if (allPassed && testResults.length > 0) {
-            alert(`Congratulations! You've completed this lesson and earned ${lesson.points} points!`);
+            alert(`Congratulations! You've completed this lesson!`); // REMOVED: points
         } else {
             alert('Please pass all test cases before submitting.');
         }
     };
 
-    const currentIndex = practiceLessons.findIndex(l => l.id === lessonId);
-    const nextLesson = currentIndex < practiceLessons.length - 1 ? practiceLessons[currentIndex + 1] : null;
-    const prevLesson = currentIndex > 0 ? practiceLessons[currentIndex - 1] : null;
+    const currentIndex = lessons.findIndex(l => l.id === lessonId);
+    const nextLesson = currentIndex < lessons.length - 1 ? lessons[currentIndex + 1] : null;
+    const prevLesson = currentIndex > 0 ? lessons[currentIndex - 1] : null;
 
     const handleBackClick = () => {
-        window.history.back();
+        if (courseId) {
+            navigate(`/course/${courseId}`);
+            return;
+        }
+        navigate(-1);
     };
 
-    const handleNavigateLesson = (newLessonId) => {
-        window.location.href = `/lesson/${newLessonId}`;
+    const handleNavigateLesson = (targetLessonId) => {
+        if (!targetLessonId) return;
+        navigate(`/lesson/${targetLessonId}`);
     };
 
-    useEffect(() => {
-        const handleMessage = (event) => {
-            if (!event?.data || (event.data.type !== 'log' && event.data.type !== 'error')) {
-                return;
-            }
-
-            setConsoleOutput((prev) => [...prev, { type: event.data.type, message: event.data.message }]);
-        };
-
-        window.addEventListener('message', handleMessage);
-        return () => window.removeEventListener('message', handleMessage);
-    }, []);
-
-    const generatePreview = () => {
-        const userCode = code.trim();
-        const hasHtmlTags = /<\/?[a-z][^>]*>/i.test(userCode);
-        const htmlSection = hasHtmlTags ? userCode : '';
-        const jsSection = hasHtmlTags ? '' : userCode;
-
-        const iframeDocument = `<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8" />
-<title>Lesson Preview</title>
-<style>
-body { font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif; padding: 1.5rem; background: #f8fafc; color: #0f172a; }
-#lesson-root { background: #fff; border-radius: 0.75rem; padding: 1.5rem; box-shadow: 0 10px 25px rgba(15, 23, 42, 0.08); min-height: 200px; }
-${starterCss}
-</style>
-</head>
-<body>
-<div id="lesson-root">${starterHtml}${htmlSection || '<p style="color:#475569;">Preview ready. Add HTML above or run JavaScript to see console output.</p>'}</div>
-<script>
-(function() {
-    const sendMessage = (type, message) => {
-        window.parent.postMessage({ type, message }, '*');
-    };
-
-    const wrapConsole = (method, level = 'log') => {
-        const original = console[method];
-        console[method] = (...args) => {
-            const msg = args.map(arg => {
-                if (typeof arg === 'object') {
-                    try { return JSON.stringify(arg); } catch (error) { return '[object]'; }
-                }
-                return String(arg);
-            }).join(' ');
-            sendMessage(level === 'error' ? 'error' : 'log', msg);
-            original.apply(console, args);
-        };
-    };
-
-    wrapConsole('log');
-    wrapConsole('info');
-    wrapConsole('warn');
-    wrapConsole('error', 'error');
-
-    window.onerror = (message) => {
-        sendMessage('error', message);
-    };
-})();
-</script>
-<script>
-${starterJs}
-${jsSection}
-</script>
-</body>
-</html>`;
-
-        setConsoleOutput([]);
-        setPreviewHTML(iframeDocument);
+    // Show next hint progressively
+    const showNextHint = () => {
+        if (content?.hints && currentHintIndex < content.hints.length - 1) {
+            setCurrentHintIndex(prev => prev + 1);
+        }
     };
 
     return (
         <div className="h-[calc(100vh-4rem)] flex flex-col">
+            {/* Anti-Cheat Warnings */}
+            {warnings.length > 0 && (
+                <div className="fixed top-20 right-4 z-50 space-y-2">
+                    {warnings.map((warning, idx) => (
+                        <div key={idx} className="bg-red-600 text-white px-4 py-2 rounded shadow-lg flex items-center gap-2">
+                            <AlertTriangle className="w-5 h-5" />
+                            <span className="text-sm">{warning.message}</span>
+                        </div>
+                    ))}
+                </div>
+            )}
+
             {/* Header */}
             <div className="bg-white border-b px-4 py-3 flex items-center justify-between">
                 <div className="flex items-center space-x-4">
@@ -293,34 +430,30 @@ ${jsSection}
                         <span className="ml-1">Back to Course</span>
                     </button>
                     <div className="h-6 w-px bg-gray-300"></div>
-                    <h1 className="text-lg font-semibold text-gray-900">{lesson.title}</h1>
+                    <h1 className="text-lg font-semibold text-gray-900">{lessonTitle}</h1>
                 </div>
-
                 <div className="flex items-center space-x-2">
-                    {lesson.completed && (
+                    {lessonCompleted && (
                         <div className="flex items-center text-green-600 mr-4">
                             <CheckCircle className="w-5 h-5 mr-2" />
                             <span className="text-sm font-medium">Completed</span>
                         </div>
                     )}
-                    <span className={`text-xs font-medium px-3 py-1 rounded ${lesson.difficulty === 'Easy'
+                    <span className={`text-xs font-medium px-3 py-1 rounded ${lessonDifficulty === 'Easy'
                         ? 'bg-green-100 text-green-700'
-                        : lesson.difficulty === 'Medium'
+                        : lessonDifficulty === 'Medium'
                             ? 'bg-yellow-100 text-yellow-700'
                             : 'bg-red-100 text-red-700'
                         }`}>
-                        {lesson.difficulty}
+                        {lessonDifficulty}
                     </span>
-                    <div className="flex items-center text-sm text-gray-600">
-                        <Award className="w-4 h-4 mr-1" />
-                        <span>{lesson.points} pts</span>
-                    </div>
+                    {/* REMOVED: Points display */}
                 </div>
             </div>
 
             <div className="flex-1 flex overflow-hidden">
                 {/* Left Panel - Instructions */}
-                <div className="w-1/2 overflow-y-auto border-r bg-white p-6">
+                <div className="w-1/2 overflow-y-auto border-r bg-white p-6" style={{ userSelect: 'none' }}>
                     <div className="prose max-w-none">
                         {content ? (
                             <div className="mb-6">
@@ -333,6 +466,7 @@ ${jsSection}
                                     <p className="text-gray-700 whitespace-pre-wrap">{content.instructions}</p>
                                 </div>
 
+                                {/* ONLY HINTS - NO SOLUTION BUTTON */}
                                 <div className="space-y-4">
                                     <button
                                         onClick={() => setShowHints(!showHints)}
@@ -349,40 +483,33 @@ ${jsSection}
 
                                     {showHints && content.hints && (
                                         <div className="bg-blue-50 rounded-lg p-4">
-                                            <ol className="list-decimal list-inside space-y-2">
-                                                {content.hints.map((hint, index) => (
-                                                    <li key={index} className="text-sm text-gray-700">{hint}</li>
+                                            <div className="space-y-3">
+                                                {content.hints.slice(0, currentHintIndex + 1).map((hint, index) => (
+                                                    <div key={index} className="bg-white rounded p-3 border-l-4 border-blue-500">
+                                                        <p className="text-sm font-semibold text-blue-800 mb-1">Hint {index + 1}:</p>
+                                                        <p className="text-sm text-gray-700">{hint}</p>
+                                                    </div>
                                                 ))}
-                                            </ol>
+
+                                                {currentHintIndex < content.hints.length - 1 && (
+                                                    <button
+                                                        onClick={showNextHint}
+                                                        className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm font-medium"
+                                                    >
+                                                        Show Next Hint ({currentHintIndex + 1}/{content.hints.length})
+                                                    </button>
+                                                )}
+                                            </div>
                                         </div>
                                     )}
 
-                                    <button
-                                        onClick={() => setShowSolution(!showSolution)}
-                                        className="w-full flex items-center justify-between p-4 bg-yellow-50 hover:bg-yellow-100 rounded-lg transition-colors"
-                                    >
-                                        <div className="flex items-center">
-                                            <CheckCircle className="w-5 h-5 text-yellow-700 mr-2" />
-                                            <span className="font-medium text-yellow-900">
-                                                {showSolution ? 'Hide Solution' : 'Show Solution'}
-                                            </span>
-                                        </div>
-                                        <ChevronRight className={`w-5 h-5 text-yellow-700 transition-transform ${showSolution ? 'rotate-90' : ''}`} />
-                                    </button>
-
-                                    {showSolution && content.solution && (
-                                        <div className="bg-gray-900 rounded-lg p-4">
-                                            <pre className="text-sm text-gray-100 overflow-x-auto">
-                                                <code>{content.solution}</code>
-                                            </pre>
-                                        </div>
-                                    )}
+                                    {/* REMOVED: Show Solution button completely */}
                                 </div>
                             </div>
                         ) : (
                             <div>
-                                <h2 className="text-2xl font-bold text-gray-900 mb-4">{lesson.title}</h2>
-                                <p className="text-gray-600 mb-6">{lesson.description}</p>
+                                <h2 className="text-2xl font-bold text-gray-900 mb-4">{lessonTitle}</h2>
+                                <p className="text-gray-600 mb-6">{lesson?.description || 'Lesson description will be available soon.'}</p>
                                 <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
                                     <p className="text-sm text-yellow-800">
                                         📚 Lesson content is being prepared. Check back soon!
@@ -427,6 +554,7 @@ ${jsSection}
                         />
                     </div>
 
+                    {/* Output Preview */}
                     <div className="border-t border-gray-700 h-64 overflow-hidden bg-white">
                         <div className="p-0 h-full flex flex-col">
                             <div className="px-4 py-2 border-b bg-gray-50">
@@ -440,10 +568,17 @@ ${jsSection}
                                     className="w-full h-full border-0"
                                 />
                             </div>
-                            <div className="h-24 border-t bg-gray-900 text-gray-100 font-mono text-sm overflow-auto p-2">
+
+                            {/* Console Output */}
+                            <div className="h-24 border-t bg-gray-900 text-gray-100 font-mono text-sm overflow-auto p-2 console-output">
                                 <div className="flex justify-between items-center mb-2">
                                     <span className="text-sm">Console Output</span>
-                                    <button onClick={() => setConsoleOutput([])} className="text-xs px-2 py-1 bg-gray-700 rounded">Clear</button>
+                                    <button
+                                        onClick={() => setConsoleOutput([])}
+                                        className="text-xs px-2 py-1 bg-gray-700 rounded hover:bg-gray-600"
+                                    >
+                                        Clear
+                                    </button>
                                 </div>
                                 {consoleOutput.length === 0 ? (
                                     <div className="text-gray-500">Console output will appear here...</div>
@@ -458,11 +593,12 @@ ${jsSection}
                         </div>
                     </div>
 
+                    {/* Navigation & Submit */}
                     <div className="border-t border-gray-700 p-4 flex items-center justify-between">
                         <div className="flex space-x-2">
                             {prevLesson && (
                                 <button
-                                    onClick={() => onNavigate && onNavigate(courseId, prevLesson.id)}
+                                    onClick={() => handleNavigateLesson(prevLesson.id)}
                                     className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors flex items-center"
                                 >
                                     <ChevronLeft className="w-4 h-4 mr-1" />
@@ -471,7 +607,7 @@ ${jsSection}
                             )}
                             {nextLesson && (
                                 <button
-                                    onClick={() => onNavigate && onNavigate(courseId, nextLesson.id)}
+                                    onClick={() => handleNavigateLesson(nextLesson.id)}
                                     className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors flex items-center"
                                 >
                                     Next
@@ -479,10 +615,10 @@ ${jsSection}
                                 </button>
                             )}
                         </div>
-
                         <button
                             onClick={handleSubmit}
-                            className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition-colors"
+                            disabled={testResults.length === 0 || !testResults.every(r => r.passed)}
+                            className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             Submit Solution
                         </button>
@@ -492,3 +628,4 @@ ${jsSection}
         </div>
     );
 }
+
