@@ -2,7 +2,7 @@
 // freeCodeCamp-style Interactive Practice Lesson Component
 
 import { useState, useRef, useEffect } from 'react';
-import { Play, RotateCcw, Check, X, ChevronRight, Lightbulb } from 'lucide-react';
+import { Play, RotateCcw, Check, X, ChevronRight, Lightbulb, Maximize, Minimize } from 'lucide-react';
 
 export default function PracticeLessonViewer({ lesson, onBack, onNext, hiltToken }) {
   const [activeTab, setActiveTab] = useState('html');
@@ -13,6 +13,7 @@ export default function PracticeLessonViewer({ lesson, onBack, onNext, hiltToken
   });
   const [testResults, setTestResults] = useState([]);
   const [allTestsPassed, setAllTestsPassed] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const [consoleOutput, setConsoleOutput] = useState([]);
   const [showHints, setShowHints] = useState(false);
 
@@ -22,6 +23,16 @@ export default function PracticeLessonViewer({ lesson, onBack, onNext, hiltToken
   useEffect(() => {
     updatePreview();
   }, [code]);
+
+  // Handle fullscreen change events
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, []);
 
   const updatePreview = () => {
     if (!previewRef.current) return;
@@ -51,6 +62,18 @@ export default function PracticeLessonViewer({ lesson, onBack, onNext, hiltToken
 
     // Use srcdoc instead of directly manipulating document
     iframe.srcdoc = fullHTML;
+  };
+
+  const toggleFullscreen = () => {
+    const elem = document.documentElement;
+
+    if (!document.fullscreenElement) {
+      elem.requestFullscreen().catch(err => {
+        console.error('Error attempting to enable fullscreen:', err);
+      });
+    } else {
+      document.exitFullscreen();
+    }
   };
 
   const runTests = () => {
@@ -219,7 +242,19 @@ export default function PracticeLessonViewer({ lesson, onBack, onNext, hiltToken
           </span>
           <span className="text-sm text-gray-500">🏆 {lesson.points} points</span>
         </div>
+
+        {/* Fullscreen button */}
+        <button
+          onClick={toggleFullscreen}
+          className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition flex items-center gap-2"
+          title={isFullscreen ? "Exit Fullscreen (ESC)" : "Enter Fullscreen"}
+        >
+          {isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
+          <span className="text-sm">{isFullscreen ? "Exit Fullscreen" : "Fullscreen"}</span>
+        </button>
       </header>
+
+
 
       {/* Main Content */}
       <div className="flex-1 flex overflow-hidden">

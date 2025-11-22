@@ -317,7 +317,6 @@ function OverviewTab({ analytics, students }) {
                                 </div>
                             </div>
                             <div className="text-right">
-                                <p className="text-sm font-medium text-gray-900">{student.points} points</p>
                                 <p className="text-xs text-gray-500">
                                     {new Date(student.createdAt).toLocaleDateString()}
                                 </p>
@@ -370,9 +369,7 @@ function StudentsTab({
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                     Email
                                 </th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Points
-                                </th>
+
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                     Status
                                 </th>
@@ -404,12 +401,7 @@ function StudentsTab({
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         <p className="text-sm text-gray-600">{student.email}</p>
                                     </td>
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                        <div className="flex items-center">
-                                            <Award className="w-4 h-4 text-yellow-500 mr-1" />
-                                            <span className="text-sm font-medium text-gray-900">{student.points}</span>
-                                        </div>
-                                    </td>
+
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${student.active
                                             ? 'bg-green-100 text-green-800'
@@ -685,11 +677,7 @@ function StudentDetailTab({ student, onBack }) {
                     </div>
                 </div>
 
-                <div className="grid grid-cols-3 gap-6 mb-6">
-                    <div className="bg-blue-50 rounded-lg p-4">
-                        <p className="text-sm text-blue-600 mb-1">Total Points</p>
-                        <p className="text-2xl font-bold text-blue-900">{student.student.points}</p>
-                    </div>
+                <div className="grid grid-cols-2 gap-6 mb-6">
                     <div className="bg-green-50 rounded-lg p-4">
                         <p className="text-sm text-green-600 mb-1">Completed Lessons</p>
                         <p className="text-2xl font-bold text-green-900">
@@ -721,7 +709,7 @@ function StudentDetailTab({ student, onBack }) {
                                             }`}>
                                             {submission.allPassed ? 'Passed' : 'Failed'}
                                         </span>
-                                        <p className="text-sm text-gray-600 mt-1">+{submission.pointsEarned} pts</p>
+
                                     </div>
                                 </div>
                             ))}
