@@ -1,5 +1,4 @@
 // frontend/src/App.jsx
-
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Layout from './components/Layout';
@@ -10,6 +9,7 @@ import LessonViewer from './components/LessonViewer';
 import ExperimentViewer from './components/ExperimentViewer';
 import LoginPage from './pages/LoginPage';
 import AdminDashboard from './components/AdminDashboard';
+import AdminLessonManagement from './components/admin/AdminLessonManagement';
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminRoute from './components/AdminRoute';
 
@@ -41,11 +41,11 @@ function App() {
         <Routes>
           {/* Public Routes */}
           <Route path="/login" element={<LoginPage />} />
-
           <Route path="/" element={<HomeRedirect />} />
 
-          {/* Protected Routes */}
+          {/* Protected Routes with Layout */}
           <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
+            {/* Student Routes */}
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/courses" element={<CoursesPage />} />
             <Route path="/course/:courseId" element={<CourseDetailPage />} />
@@ -54,6 +54,8 @@ function App() {
 
             {/* Admin Routes */}
             <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
+            <Route path="/admin/lessons" element={<AdminRoute><AdminLessonManagement /></AdminRoute>} />
+            <Route path="/admin/students" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
           </Route>
 
           {/* 404 Fallback */}

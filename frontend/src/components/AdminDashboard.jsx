@@ -166,7 +166,7 @@ export default function AdminDashboard() {
                                 <span className="text-white font-bold text-sm">ADMIN</span>
                             </div>
                             <div>
-                                <h1 className="text-xl font-bold text-gray-900">DEV-Portal Admin</h1>
+                                <h1 className="text-xl font-bold text-gray-900">WebEDX Admin</h1>
                                 <p className="text-xs text-gray-500">Dashboard & Student Management</p>
                             </div>
                         </div>

@@ -49,12 +49,12 @@ export default function LoginPage({ onNavigateToForget, onLoginSuccess }) {
             {/* Left Side - Info Panel */}
             <div className="w-full lg:w-1/2 bg-gradient-to-br from-green-800 to-green-900 p-12 flex items-center justify-center">
                 <div className="max-w-xl text-yellow-300">
-                    <h1 className="text-5xl font-bold mb-8">Welcome to DEV-Portal</h1>
+                    <h1 className="text-5xl font-bold mb-8">Welcome to WebEDX</h1>
                     <p className="text-xl mb-8 text-justify leading-relaxed">
-                        The <span className="font-semibold">Web Development Learning Management System (DEV-Portal)</span> is your dedicated online platform designed to elevate your programming skills and academic journey.
+                        The <span className="font-semibold">Web Development Learning Management System (WebEDX)</span> is your dedicated online platform designed to elevate your programming skills and academic journey.
                     </p>
 
-                    <h2 className="text-3xl font-bold mb-4">DEV - Portal Provides</h2>
+                    <h2 className="text-3xl font-bold mb-4">WebEDX Provides</h2>
                     <ul className="space-y-4 text-lg">
                         <li className="flex items-start">
                             <span className="mr-3">✓</span>
@@ -84,7 +84,7 @@ export default function LoginPage({ onNavigateToForget, onLoginSuccess }) {
                         <div className="flex justify-center mb-8">
                             <div className="w-32 h-32 bg-white rounded-full flex items-center justify-center shadow-lg">
                                 <div className="w-24 h-24 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center">
-                                    <span className="text-white text-3xl font-bold">DEV</span>
+                                    <span className="text-white text-3xl font-bold">WEDX</span>
                                 </div>
                             </div>
                         </div>

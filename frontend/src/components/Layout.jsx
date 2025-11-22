@@ -1,10 +1,9 @@
 // frontend/src/components/Layout.jsx
-
 import { Outlet, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function Layout() {
-    const { user, logout } = useAuth();
+    const { user, logout, isAdmin } = useAuth();
     const navigate = useNavigate();
 
     const handleLogout = () => {
@@ -14,30 +13,53 @@ export default function Layout() {
 
     return (
         <div className="min-h-screen bg-gray-50">
-            {/* Navigation Bar - NO POINTS DISPLAY */}
+            {/* Navigation Bar - ROLE-BASED */}
             <nav className="bg-white shadow-md">
                 <div className="max-w-7xl mx-auto px-4">
                     <div className="flex justify-between items-center h-16">
                         {/* Logo */}
-                        <Link to="/dashboard" className="flex items-center gap-2">
+                        <Link to={isAdmin ? "/admin" : "/dashboard"} className="flex items-center gap-2">
                             <span className="text-2xl">🎓</span>
-                            <span className="text-xl font-bold text-gray-800">DEV-Portal LMS</span>
+                            <span className="text-xl font-bold text-gray-800">WebEDX LMS</span>
                         </Link>
 
-                        {/* Navigation Links */}
+                        {/* Navigation Links - CONDITIONAL RENDERING */}
                         <div className="flex items-center gap-6">
-                            <Link
-                                to="/dashboard"
-                                className="text-gray-700 hover:text-blue-600 font-medium transition"
-                            >
-                                Dashboard
-                            </Link>
-                            <Link
-                                to="/courses"
-                                className="text-gray-700 hover:text-blue-600 font-medium transition"
-                            >
-                                Courses
-                            </Link>
+                            {/* STUDENT-ONLY LINKS */}
+                            {!isAdmin && (
+                                <>
+                                    <Link
+                                        to="/dashboard"
+                                        className="text-gray-700 hover:text-blue-600 font-medium transition"
+                                    >
+                                        Dashboard
+                                    </Link>
+                                    <Link
+                                        to="/courses"
+                                        className="text-gray-700 hover:text-blue-600 font-medium transition"
+                                    >
+                                        Courses
+                                    </Link>
+                                </>
+                            )}
+
+                            {/* ADMIN-ONLY LINKS */}
+                            {isAdmin && (
+                                <>
+                                    <Link
+                                        to="/admin"
+                                        className="text-gray-700 hover:text-blue-600 font-medium transition"
+                                    >
+                                        Admin Dashboard
+                                    </Link>
+                                    <Link
+                                        to="/admin/lessons"
+                                        className="text-gray-700 hover:text-blue-600 font-medium transition"
+                                    >
+                                        Manage Lessons
+                                    </Link>
+                                </>
+                            )}
 
                             {/* User Menu */}
                             <div className="flex items-center gap-4 border-l pl-4">
@@ -45,16 +67,11 @@ export default function Layout() {
                                     <p className="font-semibold text-gray-800">{user?.name}</p>
                                     <p className="text-gray-500 text-xs">{user?.email}</p>
                                 </div>
-
-                                {user?.role === 'admin' && (
-                                    <Link
-                                        to="/admin"
-                                        className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm font-medium hover:bg-purple-200"
-                                    >
+                                {isAdmin && (
+                                    <span className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm font-medium">
                                         Admin
-                                    </Link>
+                                    </span>
                                 )}
-
                                 <button
                                     onClick={handleLogout}
                                     className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition"
@@ -75,7 +92,7 @@ export default function Layout() {
             {/* Footer */}
             <footer className="bg-gray-800 text-white py-6 mt-12">
                 <div className="max-w-7xl mx-auto px-4 text-center">
-                    <p>&copy; 2025 DEV-Portal LMS. Professional Learning Management System.</p>
+                    <p>© 2025 WebEDX LMS. Professional Learning Management System.</p>
                     <p className="text-sm text-gray-400 mt-1">Built for academic excellence.</p>
                 </div>
             </footer>
