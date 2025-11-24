@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useRef } from 'react';
 import Editor from '@monaco-editor/react';
 
 export default function CodeEditor({ value, onChange, language = 'javascript' }) {
@@ -7,20 +7,36 @@ export default function CodeEditor({ value, onChange, language = 'javascript' })
     function handleMount(editor, monaco) {
         ref.current = editor;
 
-        // NEW: Disable copy/paste/cut keyboard shortcuts
-        editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyC, () => {
-            // Prevent copy
-        });
-        editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyV, () => {
-            // Prevent paste
-        });
-        editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyX, () => {
-            // Prevent cut
+        const clipboardKeys = [
+            monaco.KeyCode.KeyC,
+            monaco.KeyCode.KeyV,
+            monaco.KeyCode.KeyX
+        ];
+
+        const preventClipboardShortcut = (evt) => {
+            const isClipboardCombo = (evt.ctrlKey || evt.metaKey) && clipboardKeys.includes(evt.keyCode);
+            if (isClipboardCombo) {
+                evt.preventDefault();
+                evt.stopPropagation();
+            }
+        };
+
+        // Disable keyboard shortcuts
+        clipboardKeys.forEach((keyCode) => {
+            editor.addCommand(monaco.KeyMod.CtrlCmd | keyCode, () => { /* no-op */ });
         });
 
-        // NEW: Disable right-click context menu
+        editor.onKeyDown(preventClipboardShortcut);
+
+        // Undo any paste that slips through (e.g., via menu)
+        editor.onDidPaste(() => {
+            editor.trigger('block-paste', 'undo', null);
+        });
+
+        // Disable right-click context menu
         editor.onContextMenu((e) => {
             e.event.preventDefault();
+            e.event.stopPropagation();
         });
     }
 

@@ -18,6 +18,7 @@ export default function PracticeLessonViewer({ lesson, onBack, onNext, hiltToken
   const [showHints, setShowHints] = useState(false);
 
   const previewRef = useRef(null);
+  const viewerRef = useRef(null);
 
   // Update preview whenever code changes
   useEffect(() => {
@@ -65,7 +66,7 @@ export default function PracticeLessonViewer({ lesson, onBack, onNext, hiltToken
   };
 
   const toggleFullscreen = () => {
-    const elem = document.documentElement;
+    const elem = viewerRef.current || document.documentElement;
 
     if (!document.fullscreenElement) {
       elem.requestFullscreen().catch(err => {
@@ -74,6 +75,12 @@ export default function PracticeLessonViewer({ lesson, onBack, onNext, hiltToken
     } else {
       document.exitFullscreen();
     }
+  };
+
+  const blockClipboardEvent = (event, reason = 'Clipboard actions are disabled during practice') => {
+    event.preventDefault();
+    event.stopPropagation();
+    addToConsole(`⚠️ ${reason}`, 'warning');
   };
 
   const runTests = () => {
@@ -223,7 +230,7 @@ export default function PracticeLessonViewer({ lesson, onBack, onNext, hiltToken
   }
 
   return (
-    <div className="h-screen flex flex-col bg-gray-50">
+    <div ref={viewerRef} className="min-h-screen flex flex-col bg-gray-50">
       {/* Header */}
       <header className="bg-white border-b px-6 py-3 flex items-center justify-between">
         <div className="flex items-center gap-4">
@@ -342,6 +349,15 @@ export default function PracticeLessonViewer({ lesson, onBack, onNext, hiltToken
             <textarea
               value={code[activeTab]}
               onChange={(e) => setCode({ ...code, [activeTab]: e.target.value })}
+              onCopy={(e) => blockClipboardEvent(e, 'Copy is disabled in practice mode')}
+              onCut={(e) => blockClipboardEvent(e, 'Cut is disabled in practice mode')}
+              onPaste={(e) => blockClipboardEvent(e, 'Paste is disabled in practice mode')}
+              onContextMenu={(e) => blockClipboardEvent(e, 'Context menu is disabled in practice mode')}
+              onKeyDown={(e) => {
+                if (e.ctrlKey && ['c', 'x', 'v'].includes(e.key.toLowerCase())) {
+                  blockClipboardEvent(e);
+                }
+              }}
               className="w-full h-full p-4 font-mono text-sm resize-none focus:outline-none"
               spellCheck={false}
               placeholder={`Write your ${activeTab.toUpperCase()} code here...`}
