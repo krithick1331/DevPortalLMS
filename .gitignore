@@ -27,3 +27,5 @@ logs/
 
 # Database
 data/db/
+.vercel
+.env*.local
